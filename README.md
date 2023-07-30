@@ -7,9 +7,6 @@ Technologies Used
 ```
 React Native
 React Context API
-
-
-
 Mapbox
 React Native Gifted Chat
 ```
