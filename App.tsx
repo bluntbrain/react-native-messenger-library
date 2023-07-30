@@ -1,13 +1,8 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import type {PropsWithChildren} from 'react';
 import {
+  Alert,
+  PermissionsAndroid,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -24,74 +19,174 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+import {ChatComponent} from './src/components/ChatComponent';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {Message, User} from './src/utils/types';
+import Geolocation from 'react-native-geolocation-service';
 
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
+  const [users, setUsers] = useState<Array<User>>([]);
+  const [currentUserCoordinates, setCurrentUserCoordinates] = useState({});
+  
+
+  useEffect(() => {
+    console.log('starting requestLocationPermission');
+    const requestLocationPermission = async () => {
+      console.log('inside requestLocationPermission');
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        {
+          title: 'Hey There Location Permission',
+          message:
+            'Hey There needs access to your location ' +
+            'so you can take awesome chats.',
+          // buttonNeutral: "Ask Me Later",
+          buttonNegative: 'Cancel',
+          buttonPositive: 'Allow',
+        },
+      );
+
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('inside requestLocationPermission GRANTED');
+
+        fetchUsers();
+      } else {
+        console.log('inside requestLocationPermission DENIED');
+        Alert.alert(
+          'Permission Denied!',
+          'You need to give location permission to use this app',
+        );
+      }
+    };
+
+    requestLocationPermission();
+  }, []);
+
+  useEffect(() => {
+    getCurrentUserCoordinates();
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    const storedUsers = await AsyncStorage.getItem('users');
+    if (storedUsers) {
+      setUsers(JSON.parse(storedUsers));
+    } else {
+      // If no users are stored, create mock users based on device location
+      Geolocation.getCurrentPosition(
+        async position => {
+          const {latitude, longitude} = position.coords;
+          const mockUsers = createMockUsers(latitude, longitude);
+          await AsyncStorage.setItem('users', JSON.stringify(mockUsers));
+          setUsers(mockUsers);
+        },
+        error => {
+          console.log(error.code, error.message);
+        },
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+      );
+    }
+  };
+
+  const getCurrentUserCoordinates = () => {
+    Geolocation.getCurrentPosition(
+      async position => {
+        setCurrentUserCoordinates(position.coords);
+        console.log('found current user coordinates', position.coords);
+      },
+      error => {
+        console.log(error.code, error.message);
+      },
+      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+    );
+  };
+
+  const createMockMessages = (
+    userId: string,
+    numberOfMessages: number,
+  ): Array<Message> => {
+    return Array.from({length: numberOfMessages}, (_, i) => ({
+      _id: `${userId}-message${i}`,
+      text: `Mock message ${i} from ${userId}`,
+      createdAt: new Date(),
+      user: {
+        _id: userId,
+        name: userId,
+      },
+    }));
+  };
+
+  const createMockUsers = (
+    latitude: number,
+    longitude: number,
+  ): Array<User> => {
+    // Create 10 mock users
+    const mockUsers = Array.from({length: 10}, (_, i) => {
+      const userId = `mockuser${i}`;
+      return {
+        id: userId,
+        username: `Mock User ${i}`,
+        location: {
+          latitude: latitude + Math.random() * 0.01, // Random location nearby
+          longitude: longitude + Math.random() * 0.01,
+        },
+        messages: createMockMessages(userId, 5), // Generate 5 messages per user
+      };
+    });
+
+    return mockUsers;
+  };
+
+  const onMessageSend = async (selectedUser, message: Message) => {
+    console.log('onMessageSend', message);
+    // Updating users array with the new message
+    const updatedUsers = users.map(user => {
+      if (user.id === selectedUser.id) {
+        return {
+          ...user,
+          messages: [...user.messages, message],
+        };
+      }
+      return user;
+    });
+
+    // Storing updated users in AsyncStorage
+    await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+    console.log('updatedUsers in onMessageSend', JSON.stringify(updatedUsers));
+    setUsers(updatedUsers);
+  };
+
+  const messageReducer = (state, action) => {
+    switch (action.type) {
+      case 'add':
+        return [...state, action.message];
+      default:
+        throw new Error();
+    }
+  }
+  
+  
+
   return (
-    <SafeAreaView style={backgroundStyle}>
+    <SafeAreaView style={{flex: 1}}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
+      <ChatComponent
+        userList={users}
+        onMessageSend={onMessageSend}
+        currentUserCoordinates={currentUserCoordinates}
+      />
     </SafeAreaView>
   );
 }
