@@ -1,10 +1,16 @@
 ## Hey There! - Location-based Chat Application
 Welcome to Hey There! This is a location-based chat application built with React Native. It allows users to see other users on a map and start a chat conversation by selecting a user marker on the map. </br>
 
+![Alt text](https://github.com/bluntbrain/react-native-messenger-library/assets/34113569/a251c83b-369a-4f65-8876-3bfb7a9ba2c3)
+
+
 Technologies Used
 ```
 React Native
 React Context API
+
+
+
 Mapbox
 React Native Gifted Chat
 ```
