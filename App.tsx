@@ -1,77 +1,58 @@
 import React, {useEffect, useState} from 'react';
-import type {PropsWithChildren} from 'react';
+import type {} from 'react';
 import {
   Alert,
+  LogBox,
   PermissionsAndroid,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
 import {ChatComponent} from './src/components/ChatComponent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Message, User} from './src/utils/types';
 import Geolocation from 'react-native-geolocation-service';
+import {MessageContext} from './src/utils/MessageContext';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
+LogBox.ignoreAllLogs();
 function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
   const [users, setUsers] = useState<Array<User>>([]);
   const [currentUserCoordinates, setCurrentUserCoordinates] = useState({});
-  
+  const [messages, setMessages] = useState([]);
 
-  useEffect(() => {
-    console.log('starting requestLocationPermission');
-    const requestLocationPermission = async () => {
-      console.log('inside requestLocationPermission');
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        {
-          title: 'Hey There Location Permission',
-          message:
-            'Hey There needs access to your location ' +
-            'so you can take awesome chats.',
-          // buttonNeutral: "Ask Me Later",
-          buttonNegative: 'Cancel',
-          buttonPositive: 'Allow',
-        },
+  const requestLocationPermission = async () => {
+    console.log('inside requestLocationPermission');
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        title: 'Hey There Location Permission',
+        message:
+          'Hey There needs access to your location ' +
+          'so you can take awesome chats.',
+        // buttonNeutral: "Ask Me Later",
+        buttonNegative: 'Cancel',
+        buttonPositive: 'Allow',
+      },
+    );
+
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      console.log('inside requestLocationPermission GRANTED');
+      getCurrentUserCoordinates();
+      fetchUsers();
+    } else {
+      console.log('inside requestLocationPermission DENIED');
+      Alert.alert(
+        'Permission Denied!',
+        'You need to give location permission to use this app',
       );
-
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        console.log('inside requestLocationPermission GRANTED');
-
-        fetchUsers();
-      } else {
-        console.log('inside requestLocationPermission DENIED');
-        Alert.alert(
-          'Permission Denied!',
-          'You need to give location permission to use this app',
-        );
-      }
-    };
-
-    requestLocationPermission();
-  }, []);
+    }
+  };
 
   useEffect(() => {
+    requestLocationPermission();
     getCurrentUserCoordinates();
     fetchUsers();
   }, []);
@@ -110,21 +91,6 @@ function App(): JSX.Element {
     );
   };
 
-  const createMockMessages = (
-    userId: string,
-    numberOfMessages: number,
-  ): Array<Message> => {
-    return Array.from({length: numberOfMessages}, (_, i) => ({
-      _id: `${userId}-message${i}`,
-      text: `Mock message ${i} from ${userId}`,
-      createdAt: new Date(),
-      user: {
-        _id: userId,
-        name: userId,
-      },
-    }));
-  };
-
   const createMockUsers = (
     latitude: number,
     longitude: number,
@@ -139,7 +105,7 @@ function App(): JSX.Element {
           latitude: latitude + Math.random() * 0.01, // Random location nearby
           longitude: longitude + Math.random() * 0.01,
         },
-        messages: createMockMessages(userId, 5), // Generate 5 messages per user
+        messages: [], // Generate 5 messages per user
       };
     });
 
@@ -165,29 +131,17 @@ function App(): JSX.Element {
     setUsers(updatedUsers);
   };
 
-  const messageReducer = (state, action) => {
-    switch (action.type) {
-      case 'add':
-        return [...state, action.message];
-      default:
-        throw new Error();
-    }
-  }
-  
-  
-
   return (
-    <SafeAreaView style={{flex: 1}}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ChatComponent
-        userList={users}
-        onMessageSend={onMessageSend}
-        currentUserCoordinates={currentUserCoordinates}
-      />
-    </SafeAreaView>
+    <MessageContext.Provider value={{messages, setMessages}}>
+      <SafeAreaView style={{flex: 1}}>
+        <StatusBar barStyle={'dark-content'} backgroundColor={'#fff'} />
+        <ChatComponent
+          userList={users}
+          onMessageSend={onMessageSend}
+          currentUserCoordinates={currentUserCoordinates}
+        />
+      </SafeAreaView>
+    </MessageContext.Provider>
   );
 }
 

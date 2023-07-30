@@ -1,7 +1,8 @@
 import React, {useState, useEffect} from 'react';
-import {StyleSheet, View, TouchableOpacity} from 'react-native';
+import {StyleSheet, View, TouchableOpacity, Text} from 'react-native';
 import Mapbox, {Camera, MarkerView} from '@rnmapbox/maps';
 import {User} from '../utils/types';
+import AppBar from './AppbarComponent';
 
 interface MapScreenProps {
   users: User[];
@@ -25,32 +26,38 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   console.log('users in mapscreen', users);
   return (
     <View style={styles.page}>
+    
       <View style={styles.container}>
-        <Mapbox.MapView style={styles.map}>
-          <Camera
-            centerCoordinate={[
-              currentUserCoordinates.longitude,
-              currentUserCoordinates.latitude,
-            ]}
-            zoomLevel={14}
-          />
-          <MarkerView
-            coordinate={[
-              currentUserCoordinates.longitude,
-              currentUserCoordinates.latitude,
-            ]}>
-            <View style={[styles.marker, {backgroundColor: 'green'}]} />
-          </MarkerView>
-          {users.map(user => (
+      <AppBar title={'Welcome to Hey There!'} showBackIcon={false} subtitle={'Click on any red dot to continue chatting.'}/>
+
+        {currentUserCoordinates.longitude && currentUserCoordinates.latitude ? (
+          <Mapbox.MapView style={styles.map}>
+            <Camera
+              centerCoordinate={[
+                currentUserCoordinates.longitude,
+                currentUserCoordinates.latitude,
+              ]}
+              zoomLevel={15}
+            />
             <MarkerView
-              key={user.id}
-              coordinate={[user.location.longitude, user.location.latitude]}>
-              <TouchableOpacity onPress={() => onMarkerPress(user)}>
-                <View style={styles.marker} />
-              </TouchableOpacity>
+              coordinate={[
+                currentUserCoordinates.longitude,
+                currentUserCoordinates.latitude,
+              ]}>
+              <View style={[styles.marker, {backgroundColor: 'green'}]} />
+              <Text style={styles.youAreHere}>You are here</Text>
             </MarkerView>
-          ))}
-        </Mapbox.MapView>
+            {users.map(user => (
+              <MarkerView
+                key={user.id}
+                coordinate={[user.location.longitude, user.location.latitude]}>
+                <TouchableOpacity onPress={() => onMarkerPress(user)}>
+                  <View style={styles.marker} />
+                </TouchableOpacity>
+              </MarkerView>
+            ))}
+          </Mapbox.MapView>
+        ) : null}
       </View>
     </View>
   );
@@ -77,4 +84,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: 'red',
   },
+  youAreHere:{
+    fontSize:8, color:'#000'
+  }
 });
