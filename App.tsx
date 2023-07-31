@@ -1,116 +1,35 @@
 import React, {useEffect, useState} from 'react';
 import type {} from 'react';
 import {
-  Alert,
   LogBox,
-  PermissionsAndroid,
   SafeAreaView,
   StatusBar,
   StyleSheet,
-  Text,
-  View,
 } from 'react-native';
 
 import {ChatComponent} from './src/components/ChatComponent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Message, User} from './src/utils/types';
-import Geolocation from 'react-native-geolocation-service';
 import {MessageContext} from './src/utils/MessageContext';
+import {requestLocationPermission} from './src/utils/helpers';
 
 LogBox.ignoreAllLogs();
 function App(): JSX.Element {
   const [users, setUsers] = useState<Array<User>>([]);
   const [currentUserCoordinates, setCurrentUserCoordinates] = useState({});
   const [messages, setMessages] = useState([]);
-
-  const requestLocationPermission = async () => {
-    console.log('inside requestLocationPermission');
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: 'Hey There Location Permission',
-        message:
-          'Hey There needs access to your location ' +
-          'so you can take awesome chats.',
-        // buttonNeutral: "Ask Me Later",
-        buttonNegative: 'Cancel',
-        buttonPositive: 'Allow',
-      },
-    );
-
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      console.log('inside requestLocationPermission GRANTED');
-      getCurrentUserCoordinates();
-      fetchUsers();
-    } else {
-      console.log('inside requestLocationPermission DENIED');
-      Alert.alert(
-        'Permission Denied!',
-        'You need to give location permission to use this app',
-      );
-    }
-  };
+  const [locationPermissionGranted, setLocationPermissionGranted] =
+    useState(false);
 
   useEffect(() => {
-    requestLocationPermission();
-    getCurrentUserCoordinates();
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    const storedUsers = await AsyncStorage.getItem('users');
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    } else {
-      // If no users are stored, create mock users based on device location
-      Geolocation.getCurrentPosition(
-        async position => {
-          const {latitude, longitude} = position.coords;
-          const mockUsers = createMockUsers(latitude, longitude);
-          await AsyncStorage.setItem('users', JSON.stringify(mockUsers));
-          setUsers(mockUsers);
-        },
-        error => {
-          console.log(error.code, error.message);
-        },
-        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-      );
-    }
-  };
-
-  const getCurrentUserCoordinates = () => {
-    Geolocation.getCurrentPosition(
-      async position => {
-        setCurrentUserCoordinates(position.coords);
-        console.log('found current user coordinates', position.coords);
-      },
-      error => {
-        console.log(error.code, error.message);
-      },
-      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+    console.log('calling useEffect');
+    setCurrentUserCoordinates;
+    requestLocationPermission(
+      setLocationPermissionGranted,
+      setUsers,
+      setCurrentUserCoordinates,
     );
-  };
-
-  const createMockUsers = (
-    latitude: number,
-    longitude: number,
-  ): Array<User> => {
-    // Create 10 mock users
-    const mockUsers = Array.from({length: 10}, (_, i) => {
-      const userId = `mockuser${i}`;
-      return {
-        id: userId,
-        username: `Mock User ${i}`,
-        location: {
-          latitude: latitude + Math.random() * 0.01, // Random location nearby
-          longitude: longitude + Math.random() * 0.01,
-        },
-        messages: [], // Generate 5 messages per user
-      };
-    });
-
-    return mockUsers;
-  };
+  }, [locationPermissionGranted]);
 
   const onMessageSend = async (selectedUser, message: Message) => {
     console.log('onMessageSend', message);

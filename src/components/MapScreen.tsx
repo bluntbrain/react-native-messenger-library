@@ -3,6 +3,7 @@ import {StyleSheet, View, TouchableOpacity, Text} from 'react-native';
 import Mapbox, {Camera, MarkerView} from '@rnmapbox/maps';
 import {User} from '../utils/types';
 import AppBar from './AppbarComponent';
+import { MAPBOX_ACCESS_TOKEN } from '@env';
 
 interface MapScreenProps {
   users: User[];
@@ -18,9 +19,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   useEffect(() => {
     Mapbox.setWellKnownTileServer('Mapbox');
     Mapbox.setConnected(true);
-    Mapbox.setAccessToken(
-      'pk.eyJ1IjoiaXNoYW4tbGFraHdhbmkiLCJhIjoiY2xrbzN3MTRlMHBldjNyazRnMXQxeHl3OCJ9.8zv5_nbzvm4pwgPyh2niog',
-    );
+    Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
   }, []);
 
   console.log('users in mapscreen', users);
